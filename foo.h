@@ -3,4 +3,7 @@
 #include <unistd.h>
 
 int error(char *msg);
-int main(int argc, char *argv);
+
+int UTCREMBX(char *mbx_name, int msg_size, int mbx_size, int *fd);
+
+int UTDELMBX(int fd);

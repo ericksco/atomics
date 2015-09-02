@@ -1,9 +1,9 @@
 all:	foo
 
-foo.o:	
-	gcc -m64 -c foo.c
+foo.o:	foo.c foo.h
+	gcc -m64 -Wall -Werror -c foo.c
 
-libatomics.so:
+libatomics.so:	foo.h atomics.c
 	gcc -m64 -Wall -Werror -fPIC -shared -o libatomics.so atomics.c
 
 foo:	foo.o libatomics.so
@@ -11,3 +11,6 @@ foo:	foo.o libatomics.so
 
 clean:
 	rm -rf *.o *.so
+
+test:	foo
+	LD_LIBRARY_PATH=. ./foo
