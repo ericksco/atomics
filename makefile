@@ -1,13 +1,13 @@
 all:	foo
 
-foo.o:	foo.c foo.h
+foo.o:	foo.h foo.c
 	gcc -m64 -Wall -Werror -c foo.c
 
-libatomics.so:	foo.h atomics.c
-	gcc -m64 -Wall -Werror -fPIC -shared -o libatomics.so atomics.c
+libut_lib.so:	ut_lib.h ut_lib.c
+	gcc -m64 -Wall -Werror -fPIC -shared -o libut_lib.so ut_lib.c
 
-foo:	foo.o libatomics.so
-	gcc -o foo -L. -latomics foo.o
+foo:	foo.o libut_lib.so
+	gcc -o foo -L. -lut_lib foo.o
 
 clean:
 	rm -rf *.o *.so
