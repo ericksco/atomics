@@ -1,16 +1,36 @@
-all:	foo
+# 
+# Description:
+#
+#      Library to emulate VMS mailboxes using named pipes (FIFOs)
+#
+# Log:
+#
+#      Date            Author                  Change Desc
+#      ===========     =============           ====================
+#      01-SEP-2015     Cory Erickson           Creation
+#
 
-foo.o:	foo.h foo.c
-	gcc -m64 -Wall -Werror -c foo.c
 
-libut_lib.so:	ut_lib.h ut_lib.c
-	gcc -m64 -Wall -Werror -fPIC -shared -o libut_lib.so ut_lib.c
+all:	foo_reader foo_writer libut.so
 
-foo:	foo.o libut_lib.so
-	gcc -o foo -L. -lut_lib foo.o
+foo_reader.o:	foo.h foo_reader.c
+	gcc -m64 -Wall -Werror -c foo_reader.c
+
+foo_writer.o:	foo.h foo_writer.c
+	gcc -m64 -Wall -Werror -c foo_writer.c
+
+libut.so:	ut.h ut.c
+	gcc -m64 -Wall -Werror -fPIC -shared -o libut.so ut.c
+
+foo_reader:	foo_reader.o libut.so
+	gcc -o foo_reader -L. -lut foo_reader.o
+
+foo_writer:	foo_writer.o libut.so
+	gcc -o foo_writer -L. -lut foo_writer.o
 
 clean:
-	rm -rf *.o *.so
+	rm -rf *.o *.so foo_reader foo_writer
 
-test:	foo
-	LD_LIBRARY_PATH=. ./foo
+test:	foo_reader foo_writer
+	LD_LIBRARY_PATH=. ./foo_reader & \
+	sleep 5; LD_LIBRARY_PATH=. ./foo_writer
