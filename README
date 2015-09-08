@@ -1,0 +1,13 @@
+This package contains a set of "UT" functions used to create named pipes for communication between two independent executing programs. The functions emulate functions written in VMS to utilize mail boxes.
+
+package description:
+
+README	- this file
+ut.c	- ut functions
+ut.h	- ut function header file
+foo_reader.c	- FIFO test program
+foo_writer.c	- FIFO test program
+foo.h		- FIFO test program header file
+makefile	- file used to build shared library and test programs
+
+To build the library and test programs, run `make all`
