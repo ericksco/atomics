@@ -19,19 +19,19 @@ int main(int argc, char *argv[])
 	int myfd1;	/* file descriptor */
 	int retc;	/* return code */
 	struct vms_iosb iosb;	/* structure to IO metadata */
-	char buffer[128 * 1024] = "five nights at freddies";	/* write buffer with arbitrary data */
+	char buffer[128] = "five nights at freddies";	/* write buffer with arbitrary data */
 
 	retc = UTASNMBX("/tmp/foo_reader", &myfd1);
 	if ( retc < 0 ) {
-		fprintf(stderr, "UTASNMBX returned non-zero");
+		fprintf(stderr, "UTASNMBX returned non-zero\n");
 		exit(1);
 	}
 
 	printf("foo_writer: attached to /tmp/foo_reader, fd = %d (retc = %d)\n", myfd1, retc);
 
-	retc = UTWRIMBX(myfd1, sizeof(buffer), 0, "02", buffer, &iosb);
+	retc = UTWRIMBX(myfd1, sizeof(buffer), 0, "05", buffer, &iosb);
 	if ( retc < 0 ) {
-		fprintf(stderr, "UTWRIMBX returned non-zero");
+		fprintf(stderr, "UTWRIMBX returned non-zero\n");
 		exit(1);
 	}
 
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 
 	retc = UTDEAMBX(myfd1);
 	if ( retc < 0 ) {
-		fprintf(stderr, "UTDEAMBX returned non-zero");
+		fprintf(stderr, "UTDEAMBX returned non-zero\n");
 		exit(1);
 	}
 

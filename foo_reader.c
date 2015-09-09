@@ -23,18 +23,18 @@ int main(int argc, char *argv[])
 
 	retc = UTCREMBX("/tmp/foo_reader", 64, 64, &myfd1);
         if ( retc < 0 ) {
-                fprintf(stderr, "UTCREMBX returned non-zero");
+                fprintf(stderr, "UTCREMBX returned non-zero\n");
                 exit(1);
         }
 	printf("foo_reader: listening on fd %d (retc = %d)\n", myfd1, retc);
 
-	retc = UTREDMBX(myfd1, sizeof(buffer) - 1, "3", &iosb, buffer);
+	retc = UTREDMBX(myfd1, sizeof(buffer) - 1, "05", &iosb, buffer);
         if ( retc < 0 ) {
-                fprintf(stderr, "UTREDMBX returned non-zero");
+                fprintf(stderr, "UTREDMBX returned non-zero\n");
                 exit(1);
         }
-
 	buffer[sizeof(buffer)] = '\0';
+
 	printf("foo_reader: read %lu bytes from fd %d: \"%s\"\n", sizeof(buffer), myfd1, buffer);
 	printf("foo_reader: UTREDMBX returned %d\n", retc);
 	printf("foo_reader: iosb.iostatus = %d\n", iosb.io_status);
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 
 	retc = UTDELMBX(myfd1);
         if ( retc < 0 ) {
-                fprintf(stderr, "UTDELMBX returned non-zero");
+                fprintf(stderr, "UTDELMBX returned non-zero\n");
                 exit(1);
         }
 
