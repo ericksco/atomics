@@ -11,7 +11,7 @@
 #
 
 
-all:	foo_reader foo_writer libut.so
+all:	libut.so
 
 foo_reader.o:	foo.h foo_reader.c
 	gcc -g -m64 -Wall -Werror -c foo_reader.c
@@ -28,9 +28,13 @@ foo_reader:	foo_reader.o libut.so
 foo_writer:	foo_writer.o libut.so
 	gcc -g -m64 -o foo_writer -L. -lut foo_writer.o
 
+foo_reader_timeout:	foo_reader_timeout.c libut.so
+	gcc -g -m64 -o foo_reader_timeout -L. -lut foo_reader_timeout.c
+
+foo_writer_timeout:	foo_writer_timeout.c libut.so
+	gcc -g -m64 -o foo_writer_timeout -L. -lut foo_writer_timeout.c
+
 clean:
 	rm -rf *.o *.so foo_reader foo_writer
 
-test:	foo_reader foo_writer
-	LD_LIBRARY_PATH=. ./foo_reader & \
-	sleep 5; LD_LIBRARY_PATH=. ./foo_writer
+test:	foo_reader_timeout foo_writer_timeout foo_reader foo_writer

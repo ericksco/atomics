@@ -26,27 +26,18 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "UTCREMBX returned non-zero");
                 exit(1);
         }
-	printf("foo_reader: listening on fd %d (retc = %d)\n", myfd1, retc);
 
 	retc = UTREDMBX(myfd1, sizeof(buffer) - 1, "3", &iosb, buffer);
-        if ( retc < 0 ) {
-                fprintf(stderr, "UTREDMBX returned non-zero");
-                exit(1);
+        if ( retc == -2 ) {
+                printf("UTREDMBX timeout: SUCCESS!!");
         }
-
-	buffer[sizeof(buffer)] = '\0';
-	printf("foo_reader: read %lu bytes from fd %d: \"%s\"\n", sizeof(buffer), myfd1, buffer);
-	printf("foo_reader: UTREDMBX returned %d\n", retc);
-	printf("foo_reader: iosb.iostatus = %d\n", iosb.io_status);
-	printf("foo_reader: iosb.chars_transferred = %d\n", iosb.chars_transferred);
 
 	retc = UTDELMBX(myfd1);
         if ( retc < 0 ) {
                 fprintf(stderr, "UTDELMBX returned non-zero");
-                exit(1);
         }
 
-	printf("foo_reader: UTDELMBX returned %d\n", retc);
+	printf("\n");
 
 	return 0;
 }

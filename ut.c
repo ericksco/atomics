@@ -168,10 +168,10 @@ int UTREDMBX(int fd, size_t msg_size, char *wait_sec, struct vms_iosb *iosb, cha
 		}
 	}
 	else if (select_ready == 0) {
-		fprintf(stderr, "read timeout");
+		fprintf(stderr, "read timeout\n");
 		iosb->io_status = SS$_ABORT;
 		iosb->chars_transferred = 0;
-		ret = -1;
+		ret = -2;
 	}
 	else /* ( select_ready < 0 ) */ {
 		perror("select failure");
@@ -193,6 +193,9 @@ int UTWRIMBX(int fd, size_t msg_size, int eof_ind, char *wait_sec, char *data, s
 	short	ret = 0;		/* return code */
 	char	wait_sec_str[3];
 	int	wait_sec_int;
+	fd_set	writeset;
+	struct 	timeval tv;
+	int	select_ready;
 
 	iosb->chars_transferred = 0;
 
@@ -200,9 +203,18 @@ int UTWRIMBX(int fd, size_t msg_size, int eof_ind, char *wait_sec, char *data, s
 	strncpy(wait_sec_str, wait_sec, sizeof(wait_sec_str));
 	wait_sec_int = atoi(wait_sec_str);
 
-	printf("in write\n");
+	/* set timout */
+	tv.tv_sec = wait_sec_int;
+	tv.tv_usec = 0;
 
-	while ( ((msg_size - totalwritten) > 0) && (write_return != -1) ) {
+	/* add fd to read set */
+	FD_ZERO(&writeset);
+	FD_SET(fd, &writeset);
+
+	while ( ((select_ready = select(fd + 1, 0, &writeset, 0, &tv)) > 0)	/* fd is writable */
+		&& ((msg_size - totalwritten) > 0) 				/* there's data left to write */
+		&& (write_return != -1) ) {					/* write() is not returning errors */
+
 		if ( (write_return = write(fd, dataptr, msg_size - totalwritten)) == -1 ) {
 			perror("write failure");
 
@@ -211,19 +223,19 @@ int UTWRIMBX(int fd, size_t msg_size, int eof_ind, char *wait_sec, char *data, s
 			iosb->chars_transferred = totalwritten;
 			ret = -1;
 		}
-		printf("wrote %d bytes\n", (int) write_return);
-		fflush(stdin);
 		dataptr += write_return;
 		totalwritten += write_return;
+
+		/* add fd to read set */
+		FD_ZERO(&writeset);
+		FD_SET(fd, &writeset);
 	}
 
-/*
 	if (select_ready == 0) {
-		fprintf(stderr, "write timeout");
+		fprintf(stderr, "write timeout\n");
 		iosb->io_status = SS$_ABORT;
-		ret = -1;
+		ret = -2;
 	}
-*/
 
 	if ( write_return > 0 ) {
 		/* update iosb */
