@@ -57,7 +57,7 @@ int UTCREMBX(char *mbx_name, int msg_size, int mbx_size, int *fd)
 		}
 	}
 	/* now open fifo */
-	if ( (*fd = open(fifoname, O_RDWR)) < 0 ) {
+	if ( (*fd = open(fifoname, O_RDWR | O_NONBLOCK)) < 0 ) {
 		perror("can't open fifo");
 		ret = -1;
 	}
@@ -97,7 +97,7 @@ int UTASNMBX(char *mbx_name, int *fd)
 		/* check whether fifo exists */
 		if ( access(mbx_name, F_OK) == 0 ) {
 			/* open fifo */
-			if ( (*fd = open(mbx_name, O_RDWR)) < 0 ) {
+			if ( (*fd = open(mbx_name, O_RDWR | O_NONBLOCK)) < 0 ) {
 				perror("can't open fifo");
 				ret = -1;
 			}
@@ -193,9 +193,6 @@ int UTWRIMBX(int fd, size_t msg_size, int eof_ind, char *wait_sec, char *data, s
 	short	ret = 0;		/* return code */
 	char	wait_sec_str[3];
 	int	wait_sec_int;
-	fd_set	writeset;
-	struct 	timeval tv;
-	int	select_ready;
 
 	iosb->chars_transferred = 0;
 
@@ -203,17 +200,9 @@ int UTWRIMBX(int fd, size_t msg_size, int eof_ind, char *wait_sec, char *data, s
 	strncpy(wait_sec_str, wait_sec, sizeof(wait_sec_str));
 	wait_sec_int = atoi(wait_sec_str);
 
-	/* set timout */
-	tv.tv_sec = wait_sec_int;
-	tv.tv_usec = 0;
-
-	/* add fd to read set */
-	FD_ZERO(&writeset);
-	FD_SET(fd, &writeset);
-
 	printf("in write\n");
 
-	while ( (select_ready = select(fd + 1, 0, &writeset, 0, &tv)) > 0 && ((msg_size - totalwritten) > 0) && (write_return != -1) ) {
+	while ( ((msg_size - totalwritten) > 0) && (write_return != -1) ) {
 		if ( (write_return = write(fd, dataptr, msg_size - totalwritten)) == -1 ) {
 			perror("write failure");
 
@@ -226,17 +215,15 @@ int UTWRIMBX(int fd, size_t msg_size, int eof_ind, char *wait_sec, char *data, s
 		fflush(stdin);
 		dataptr += write_return;
 		totalwritten += write_return;
-
-		/* add fd to read set */
-		FD_ZERO(&writeset);
-		FD_SET(fd, &writeset);
 	}
 
+/*
 	if (select_ready == 0) {
 		fprintf(stderr, "write timeout");
 		iosb->io_status = SS$_ABORT;
 		ret = -1;
 	}
+*/
 
 	if ( write_return > 0 ) {
 		/* update iosb */

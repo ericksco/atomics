@@ -13,3 +13,13 @@ makefile	- file used to build shared library and test programs
 To build the library and test programs, run `make all`.
 
 To execute tests, run `make test`.
+
+Notes:
+----------------------------------
+open/O_WRONLY	hangs if no reader
+open/O_RDONLY	hangs if no writer
+open/RDWR/read	opens with no writer, hangs on read	
+open/RDWR/write	opens with no reader, hangs on write if exceeds PIPE_BUF
+open/RDWR/read/O_NONBLOCK	opens with no writer, read returns EAGAIN
+open/RDWR/write/O_NONBLOCK	opens with no reader, write returns with only bytes written and no errno
+
