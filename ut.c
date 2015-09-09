@@ -184,6 +184,7 @@ int UTREDMBX(int fd, size_t msg_size, char *wait_sec, struct vms_iosb *iosb, cha
 int UTWRIMBX(int fd, size_t msg_size, int eof_ind, char *wait_sec, char *data, struct vms_iosb *iosb)
 {
 	/* the following parameters aren't used:
+	* eof_ind is not utilized at this time 	
  	*/		
 
 	char	*dataptr = data;	/* pointer to passed in data buffer for use in write() function */
@@ -210,6 +211,8 @@ int UTWRIMBX(int fd, size_t msg_size, int eof_ind, char *wait_sec, char *data, s
 	FD_ZERO(&writeset);
 	FD_SET(fd, &writeset);
 
+	printf("in write\n");
+
 	while ( (select_ready = select(fd + 1, 0, &writeset, 0, &tv)) > 0 && ((msg_size - totalwritten) > 0) && (write_return != -1) ) {
 		if ( (write_return = write(fd, dataptr, msg_size - totalwritten)) == -1 ) {
 			perror("write failure");
@@ -219,6 +222,8 @@ int UTWRIMBX(int fd, size_t msg_size, int eof_ind, char *wait_sec, char *data, s
 			iosb->chars_transferred = totalwritten;
 			ret = -1;
 		}
+		printf("wrote %d bytes\n", (int) write_return);
+		fflush(stdin);
 		dataptr += write_return;
 		totalwritten += write_return;
 
