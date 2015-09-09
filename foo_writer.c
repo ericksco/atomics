@@ -22,15 +22,30 @@ int main(int argc, char *argv[])
 	char buffer[50] = "five nights at freddies";	/* write buffer with arbitrary data */
 
 	retc = UTASNMBX("/tmp/foo_reader", &myfd1);
+	if ( retc < 0 ) {
+		perror("UTASNMBX returned non-zero");
+		exit(1);
+	}
+
 	printf("foo_writer: attached to /tmp/foo_reader, fd = %d (retc = %d)\n", myfd1, retc);
 
-	retc = UTWRIMBX(myfd1, sizeof(buffer), 0, 0, buffer, &iosb);
+	retc = UTWRIMBX(myfd1, sizeof(buffer), 0, "03", buffer, &iosb);
+	if ( retc < 0 ) {
+		perror("UTWRIMBX returned non-zero");
+		exit(1);
+	}
+
         printf("foo_writer: wrote %lu bytes to fd %d: \"%s\"\n", sizeof(buffer), myfd1, buffer);
         printf("foo_writer: UTWRIMBX returned %d\n", retc);
         printf("foo_writer: iosb.iostatus = %d\n", iosb.io_status);
         printf("foo_writer: iosb.chars_transferred = %d\n", iosb.chars_transferred);
 
 	retc = UTDEAMBX(myfd1);
+	if ( retc < 0 ) {
+		perror("UTDEAMBX returned non-zero");
+		exit(1);
+	}
+
 	printf("foo_writer: detached from /tmp/foo_reader (retc = %d)\n", retc);
 
 	return 0;

@@ -24,7 +24,9 @@ int main(int argc, char *argv[])
 	retc = UTCREMBX("/tmp/foo_reader", 64, 64, &myfd1);
 	printf("foo_reader: listening on fd %d (retc = %d)\n", myfd1, retc);
 
-	retc = UTREDMBX(myfd1, sizeof(buffer) - 1, 0, &iosb, buffer);
+sleep(60);
+
+	retc = UTREDMBX(myfd1, sizeof(buffer) - 1, "10", &iosb, buffer);
 	buffer[sizeof(buffer)] = '\0';
 	printf("foo_reader: read %lu bytes from fd %d: \"%s\"\n", sizeof(buffer), myfd1, buffer);
 	printf("foo_reader: UTREDMBX returned %d\n", retc);
