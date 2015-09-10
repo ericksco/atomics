@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 	int myfd1;	/* file descriptor */
 	int retc;	/* return code */
 	struct vms_iosb iosb;	/* structure to hold IO metadata */
-	char buffer[50];	/* read buffer */
+	char buffer[256];	/* read buffer */
 
 	retc = UTCREMBX("/tmp/foo_reader", 64, 64, &myfd1);
         if ( retc < 0 ) {

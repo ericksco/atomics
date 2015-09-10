@@ -88,6 +88,7 @@ int UTDELMBX(int fd)
 	return 0;
 }
 
+/* open named pipe based on path name */
 int UTASNMBX(char *mbx_name, int *fd)
 {
 	short	ret = 0;	/* return code */
@@ -117,6 +118,7 @@ int UTASNMBX(char *mbx_name, int *fd)
 	return ret;
 }
 
+/* close named pipe */
 int UTDEAMBX(int fd)
 {
 	short	ret = 0;	/* return code */
@@ -127,22 +129,23 @@ int UTDEAMBX(int fd)
 	return ret;
 }
 
+/* read data from named pipe */
 int UTREDMBX(int fd, size_t msg_size, char *wait_sec, struct vms_iosb *iosb, char *data)
 {
-	/* the following parameters aren't used:
- 	*/		
-
-	size_t	read_return = -99;	/* holds quantity of read data */
+	char	*dataptr = data;	/* pointer to passed in data buffer for use in write() function */
+	ssize_t	read_return = 1;	/* holds quantity of read data */
+	size_t	totalread = 0;		/* total quantity written */
 	short	ret = 0;		/* return code */
-	char	wait_sec_str[3];
-	int	wait_sec_int;
-	fd_set	readset;
-	struct 	timeval tv;
-	int	select_ready;
+	int	wait_sec_int;		/* integer translation of wait_sec */
+	fd_set	readset;		/* holds fds for select() */
+	struct 	timeval tv;		/* timeout structure */
+	int	select_ready;		/* return code for select() */
 
+	/* initialize counter */
+	iosb->io_status = 0;
+	iosb->chars_transferred = 0;
 	/* grab read timeout */
-	strncpy(wait_sec_str, wait_sec, sizeof(wait_sec_str));
-	wait_sec_int = atoi(wait_sec_str);
+	wait_sec_int = atoi(wait_sec);
 
 	/* set timout */
 	tv.tv_sec = wait_sec_int;
@@ -152,56 +155,69 @@ int UTREDMBX(int fd, size_t msg_size, char *wait_sec, struct vms_iosb *iosb, cha
 	FD_ZERO(&readset);
 	FD_SET(fd, &readset);
 
-	select_ready = select(fd + 1, &readset, 0, 0, &tv);	
+	while ( (select_ready = select(fd + 1, &readset, 0, 0, &tv)) > 0	/* fd is readable */
+		&& totalread < msg_size 	/* msg_size data has not been read */
+		&& read_return > 0) {		/* read() doesn't error or reach EOF */
 
-	if (select_ready > 0) {
-		/* how much to read? */
-		read_return = read(fd, data, msg_size);
-		if ( read_return < 0 ) {
+		/* read from named pipe */
+		if ( (read_return = read(fd, dataptr, msg_size - totalread)) != -1 )
+		{
+			/* successful read, set status */
+			iosb->io_status = SS$_SUCCESS;
+			iosb->chars_transferred += read_return;
+			
+			/* increment read pointer and counter */
+			dataptr += read_return;
+			totalread += read_return;
+
+			/* add fd to read set for next call to select() */
+			FD_ZERO(&readset);
+			FD_SET(fd, &readset);
+		}
+		else /* read failure */
+		{
+			/* unsuccessful read, set status, get ready to fail */
+			iosb->io_status = SS$_ABORT;
 			perror("read failure");
 			ret = -1;
 		}
-		else
-		{
-			iosb->io_status = SS$_SUCCESS;
-			iosb->chars_transferred = read_return;
-		}
 	}
-	else if (select_ready == 0) {
+
+	if (select_ready == 0) {	/* select() (read) timeout */
+		/* set status, get ready to fail */
 		fprintf(stderr, "read timeout\n");
 		iosb->io_status = SS$_ABORT;
-		iosb->chars_transferred = 0;
 		ret = -2;
 	}
-	else /* ( select_ready < 0 ) */ {
+	else if (select_ready == -1) {	/* select() error */
+		/* set status, get ready to fail */
 		perror("select failure");
+		iosb->io_status = SS$_ABORT;
 		ret = -1;
 	}
 
 	return ret;
 }
 
-int UTWRIMBX(int fd, size_t msg_size, int eof_ind, char *wait_sec, char *data, struct vms_iosb *iosb)
+/* write to named pipe */
+int UTWRIMBX(int fd, size_t msg_size, char eof_ind, char *wait_sec, char *data, struct vms_iosb *iosb)
 {
-	/* the following parameters aren't used:
-	* eof_ind is not utilized at this time 	
- 	*/		
-
 	char	*dataptr = data;	/* pointer to passed in data buffer for use in write() function */
-	size_t	write_return = 0;	/* holds return value from write() */
+	char	null = 0;
+	ssize_t	write_return = 0;	/* holds return value from write() */
 	size_t	totalwritten = 0;	/* total quantity written */
 	short	ret = 0;		/* return code */
-	char	wait_sec_str[3];
-	int	wait_sec_int;
-	fd_set	writeset;
-	struct 	timeval tv;
-	int	select_ready;
+	int	wait_sec_int;		/* integer translation of wait_sec */
+	fd_set	writeset;		/* holds fds for select() */
+	struct 	timeval tv;		/* timeout structure */
+	int	select_ready;		/* return code for select() */
 
+	/* initialize counter */
+	iosb->io_status = 0;
 	iosb->chars_transferred = 0;
 
 	/* grab read timeout */
-	strncpy(wait_sec_str, wait_sec, sizeof(wait_sec_str));
-	wait_sec_int = atoi(wait_sec_str);
+	wait_sec_int = atoi(wait_sec);
 
 	/* set timout */
 	tv.tv_sec = wait_sec_int;
@@ -211,37 +227,54 @@ int UTWRIMBX(int fd, size_t msg_size, int eof_ind, char *wait_sec, char *data, s
 	FD_ZERO(&writeset);
 	FD_SET(fd, &writeset);
 
-	while ( ((select_ready = select(fd + 1, 0, &writeset, 0, &tv)) > 0)	/* fd is writable */
-		&& ((msg_size - totalwritten) > 0) 				/* there's data left to write */
-		&& (write_return != -1) ) {					/* write() is not returning errors */
-
-		if ( (write_return = write(fd, dataptr, msg_size - totalwritten)) == -1 ) {
-			perror("write failure");
-
-			/* update iosb */
-			iosb->io_status = SS$_ABORT;
-			iosb->chars_transferred = totalwritten;
-			ret = -1;
-		}
-		dataptr += write_return;
-		totalwritten += write_return;
-
-		/* add fd to read set */
-		FD_ZERO(&writeset);
-		FD_SET(fd, &writeset);
+	/* if eof_ind = "Y", send only a single null and set iosb.io_status */
+	if (strncmp(&eof_ind, "Y", 1) == 0) {
+		dataptr = &null;
+		msg_size = 1;
+		iosb->io_status = SS$_ENDOFFILE;	
 	}
 
-	if (select_ready == 0) {
+	while ( (select_ready = select(fd + 1, 0, &writeset, 0, &tv)) > 0	/* fd is writable */
+		&& (msg_size - totalwritten) > 0 				/* there's data left to write */
+		&& write_return != -1) {					/* write() is not returning errors */
+
+		if ( (write_return = write(fd, dataptr, msg_size - totalwritten)) > -1 ) {
+			/* successful write, set status */
+			iosb->io_status = (iosb->io_status == SS$_ENDOFFILE ? SS$_ENDOFFILE : SS$_SUCCESS);
+			iosb->chars_transferred = totalwritten;
+
+			/* increment read pointer and counter */
+			dataptr += write_return;
+			totalwritten += write_return;
+
+			/* add fd to read set for next call to select() */
+			FD_ZERO(&writeset);
+			FD_SET(fd, &writeset);
+
+			fprintf(stderr, "write returned: %d\n", (int) write_return);
+		}
+		else /* write failure */
+		{
+			/* unsuccessful read, set status, get ready to fail */
+			iosb->io_status = SS$_ABORT;
+			fprintf(stderr, "write failure: %d\n", (int) write_return);
+			// perror("write failure: %d", (int) write_return);
+			ret = -1;
+		}
+	}
+
+	if (select_ready == 0) {	/* select() timeout */
+		/* set status, get ready to fail */
 		fprintf(stderr, "write timeout\n");
 		iosb->io_status = SS$_ABORT;
 		ret = -2;
 	}
-
-	if ( write_return > 0 ) {
-		/* update iosb */
-		iosb->io_status = SS$_SUCCESS;
-		iosb->chars_transferred = totalwritten;
+	else if (select_ready == -1) {	/* select() error */
+		/* set status, get ready to fail */
+		perror("select failure");
+		iosb->io_status = SS$_ABORT;
+		ret = -1;
 	}
-	
+
 	return ret;
 }
