@@ -228,7 +228,7 @@ int UTWRIMBX(int fd, size_t msg_size, char eof_ind, char *wait_sec, char *data, 
 	FD_SET(fd, &writeset);
 
 	/* if eof_ind = "Y", send only a single null and set iosb.io_status */
-	if (strncmp(&eof_ind, "Y", 1) == 0) {
+	if (eof_ind == 'Y') {
 		dataptr = &null;
 		msg_size = 1;
 		iosb->io_status = SS$_ENDOFFILE;	
