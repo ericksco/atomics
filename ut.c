@@ -68,24 +68,52 @@ int UTCREMBX(char *mbx_name, int msg_size, int mbx_size, int *fd)
 /* delete named pipe */
 int UTDELMBX(int fd)
 {
-	char fdlink[PATH_MAX];		/* file descriptor file link in /proc/self */
-	char pipepath[PATH_MAX];	/* fifo pathname */
-	int pathlength;			/* size of fifo pathname */
-	short	ret = 0;		/* return code */
-	
-	sprintf(fdlink, "/proc/self/fd/%d", fd);
-	if ( (pathlength = readlink(fdlink, pipepath, sizeof(pipepath) - 1)) > 0 ) {
-		pipepath[pathlength] = '\0';
-		if ( unlink(pipepath) < 0 ) {
-			perror("can't unlink pipe");
-			ret = -1;
-		}
+        char fdlink[PATH_MAX];          /* file descriptor file link in /proc/self */
+        char pipepath[PATH_MAX];        /* fifo pathname */
+        int pathlength;                 /* size of fifo pathname */
+	struct stat buf;		/* used to check file deletion was OK */
+	short stat_ret;			/* for testing pipe removal */
+        short ret = 1;			/* return code */
+        
+	/* we can only delete a file using the name */
+	/* use the file descriptor (fd) to look up the name in /proc */
+	/* then pass that name to the unlink() system call */
+
+	/* map the file descriptor (fd) to a soft link */
+	/* store the soft link into fdlink */
+        sprintf(fdlink, "/proc/self/fd/%d", fd);
+
+	/* now use readlink to map the soft link (fdlink) to a file name in pipepath */
+        if ( (pathlength = readlink(fdlink, pipepath, sizeof(pipepath) - 1)) > 0 ) {
+
+		/* make sure to null terminate */
+                pipepath[pathlength] = '\0';
+
+		/* unlink the file */
+                if ( unlink(pipepath) < 0 ) {
+                        perror("can't unlink pipe");
+                        ret = -1;
+                }
+        }
+
+	/* verify pipe was removed */
+
+	/* first stat() pipepath -- should return -1 as it no longer exists */
+	stat_ret = stat(pipepath, &buf);
+
+	/* if it returns 0, pipepath still exists */
+	if ( stat(pipepath, &buf) == 0) {
+		perror("pipe still exists after removal");
+		ret = -1;
 	}
 
-	/* this function should close the fd and delete the named pipe */
-	close(fd);
+        /* this function should close the fd and delete the named pipe */
+	if (close(fd) < 0 ) {
+		perror("error closing fd");                        
+                ret = -1;
+	}
 
-	return 0;
+        return ret;
 }
 
 /* open named pipe based on path name */
